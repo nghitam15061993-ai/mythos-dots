@@ -1,0 +1,28 @@
+# Secrets
+**/.env
+**/.env.local
+
+# Generated / lớn — KHÔNG đẩy GitHub (đã ở IPFS)
+out/
+demo/
+demo_grad/
+*.car
+palette.json
+palette_preview.png
+
+# deps / build
+**/node_modules/
+web/.next/
+web/out/
+agent/words.txt
+
+# foundry
+contract/lib/
+contract/out/
+contract/cache/
+contract/broadcast/
+
+.DS_Store
+
+# OMC state
+.omc/

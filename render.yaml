@@ -1,0 +1,24 @@
+# Render Blueprint cho agent service. Deploy: Render → New → Blueprint → connect repo.
+# Set 2 secret (AGENT_PRIVATE_KEY, RPC_URL) trong dashboard khi hỏi.
+services:
+  - type: web
+    name: mythos-agent
+    runtime: node
+    plan: free
+    rootDir: agent
+    buildCommand: npm install && npm run fetch-words
+    startCommand: npm start
+    healthCheckPath: /api/state
+    envVars:
+      - key: AGENT_PRIVATE_KEY
+        sync: false            # secret → nhập trong dashboard
+      - key: RPC_URL
+        sync: false            # secret → nhập trong dashboard
+      - key: CONTRACT_ADDRESS
+        value: "0x897619E9115204BE31691F5a9E40e9812B8a34F4"
+      - key: CHAIN_ID
+        value: "11155111"
+      - key: MINT_WINDOW_SEC
+        value: "120"
+      - key: SHOW_DEFINITION
+        value: "false"
