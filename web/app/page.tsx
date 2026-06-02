@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount, useReadContract } from "wagmi";
 import { readContract, writeContract, waitForTransactionReceipt } from "@wagmi/core";
@@ -11,54 +11,9 @@ import { ABI, CONTRACT_ADDRESS, AGENT_URL } from "@/lib/contract";
 type Pass = { quota: number; nonce: string; deadline: number; signature: `0x${string}` };
 type Phase = "idle" | "playing" | "solved" | "missed" | "minting" | "done";
 
-const GRADS = [
-  ["#fa709a", "#fee140"], ["#6a11cb", "#2575fc"], ["#5ee7df", "#b490ca"],
-  ["#f093fb", "#f5576c"], ["#a18cd1", "#fbc2eb"], ["#84fab0", "#8fd3f4"],
-  ["#fccb90", "#d57eeb"], ["#13547a", "#80d0c7"],
-];
-
-function DotField() {
-  const dots = useMemo(
-    () =>
-      Array.from({ length: 34 }, (_, i) => {
-        const g = GRADS[i % GRADS.length];
-        return {
-          left: (i * 37) % 100,
-          top: (i * 61) % 100,
-          size: 34 + ((i * 53) % 90),
-          bg: `linear-gradient(135deg, ${g[0]}, ${g[1]})`,
-          dur: 11 + (i % 9),
-          delay: -(i % 11),
-          dx: ((i % 7) - 3) * 14,
-          dy: ((i % 5) - 2) * 16,
-        };
-      }),
-    []
-  );
-  return (
-    <div className="dotfield">
-      {dots.map((d, i) => (
-        <span
-          key={i}
-          className="dot"
-          style={
-            {
-              left: `${d.left}%`,
-              top: `${d.top}%`,
-              width: d.size,
-              height: d.size,
-              background: d.bg,
-              "--dur": `${d.dur}s`,
-              "--delay": `${d.delay}s`,
-              "--dx": `${d.dx}px`,
-              "--dy": `${d.dy}px`,
-            } as React.CSSProperties
-          }
-        />
-      ))}
-    </div>
-  );
-}
+const IMG_CID = "bafybeifg7qyfe7jcfccgn3i7skbh7u5emqbb3atr4axwuojt66ol4xmi6e";
+const PREVIEWS = [12, 88, 256, 777, 2024, 5555];
+const imgUrl = (id: number) => `https://ipfs.filebase.io/ipfs/${IMG_CID}/${id}.png`;
 
 function phaseOf(m: number) {
   if (m < 777) return "Phase 1 · $0.03";
@@ -83,11 +38,7 @@ export default function Mint() {
   const { data: total } = useReadContract({ address: CONTRACT_ADDRESS, abi: ABI, functionName: "maxSupply" });
   const { data: minted } = useReadContract({ address: CONTRACT_ADDRESS, abi: ABI, functionName: "totalSupply" });
 
-  // warm up the agent (Render free sleeps) so the first "Play" is fast
-  useEffect(() => {
-    fetch(`${AGENT_URL}/api/state`).catch(() => {});
-  }, []);
-
+  useEffect(() => { fetch(`${AGENT_URL}/api/state`).catch(() => {}); }, []);
   const stopPoll = () => { if (poll.current) { clearInterval(poll.current); poll.current = null; } };
   useEffect(() => () => stopPoll(), []);
 
@@ -150,7 +101,7 @@ export default function Mint() {
         address: CONTRACT_ADDRESS, abi: ABI, functionName: "costForEth",
         args: [BigInt(Number(minted ?? 0n)), BigInt(pass.quota)],
       })) as bigint;
-      const value = base + base / 20n; // +5% buffer for oracle drift; contract refunds the rest
+      const value = base + base / 20n;
       const h = await writeContract(config, {
         address: CONTRACT_ADDRESS, abi: ABI, functionName: "mintWithPass",
         args: [BigInt(pass.quota), BigInt(pass.nonce), BigInt(pass.deadline), pass.signature],
@@ -172,20 +123,26 @@ export default function Mint() {
 
   return (
     <main className="app">
-      <DotField />
       <header className="topbar">
-        <div className="brand">◐ <span>Mythos Dots</span></div>
+        <div className="brand">◐ <b>Mythos Dots</b></div>
         <ConnectButton showBalance={false} chainStatus="icon" />
       </header>
 
       <section className="stage">
         <h1 className="hero-title">Mythos Dots</h1>
-        <p className="hero-sub">7777 generative pixel-dot NFTs. Solve the word, lock your allocation, mint. Faster = bigger quota.</p>
+        <p className="hero-sub">7777 generative pixel-dot NFTs. Solve the word, lock your allocation, and mint — the faster you guess, the bigger your quota.</p>
         <div className="pill"><b>{done}</b>/{supply} minted · {phaseOf(done)}</div>
+
+        <div className="previews">
+          {PREVIEWS.map((id) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={id} src={imgUrl(id)} alt={`Mythos Dot #${id}`} loading="lazy" />
+          ))}
+        </div>
 
         {phase === "idle" && (
           <>
-            <button className="orb" onClick={start} disabled={!isConnected || starting}>
+            <button className="play" onClick={start} disabled={!isConnected || starting}>
               {starting ? "Waking…" : isConnected ? "Tap to Play" : "Connect wallet"}
             </button>
             <div className="note">{note || (isConnected ? "Guess the hidden word to lock a mint allocation." : "Connect your wallet (Sepolia) to begin.")}</div>
@@ -193,10 +150,10 @@ export default function Mint() {
         )}
 
         {phase === "playing" && (
-          <div className="panel">
+          <div className="card">
             <div className="row"><span>Revealed</span><b>{revealed}/{masked.length} letters</b></div>
             <div className="word">{masked.split("").join(" ")}</div>
-            <div className="note">A new letter is revealed every 2s. Guess sooner for a bigger quota (up to 10).</div>
+            <div className="note">A new letter appears every 2s. Guess sooner for a bigger quota (up to 10).</div>
             <form onSubmit={submitGuess} className="guess-form">
               <input className="input" value={guess} onChange={(e) => setGuess(e.target.value)} placeholder="your guess" autoFocus />
               <button className="btn" type="submit">Guess</button>
@@ -206,7 +163,7 @@ export default function Mint() {
         )}
 
         {(phase === "solved" || phase === "minting") && pass && (
-          <div className="panel">
+          <div className="card">
             <div className="row"><span>🎉 Allocation locked</span><b>{pass.quota} NFT</b></div>
             <div className="row"><span>Price</span><b>~{cost} ETH</b></div>
             <div className="row"><span>Expires in</span><b>{remain}s</b></div>
@@ -218,19 +175,21 @@ export default function Mint() {
         )}
 
         {phase === "missed" && (
-          <div className="panel">
+          <div className="card">
             <div className="note">😶‍🌫️ {note || "Allocation pool is full — missed it."}</div>
             <button className="btn ghost full" onClick={() => { setPhase("idle"); setNote(""); }}>Try again</button>
           </div>
         )}
 
         {phase === "done" && (
-          <div className="panel">
+          <div className="card">
             <div className="note ok">✓ Minted {pass?.quota} NFT successfully!</div>
             <button className="btn full" onClick={() => { setPass(null); setPhase("idle"); setNote(""); }}>Play again</button>
           </div>
         )}
       </section>
+
+      <footer className="foot">Mythos Dots · 7777 on-chain pixel-dot art · pay in ETH</footer>
     </main>
   );
 }
