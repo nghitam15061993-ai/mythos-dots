@@ -15,6 +15,37 @@ const IMG_CID = "bafybeifg7qyfe7jcfccgn3i7skbh7u5emqbb3atr4axwuojt66ol4xmi6e";
 const PREVIEWS = [12, 88, 256, 777, 2024, 5555];
 const imgUrl = (id: number) => `https://ipfs.filebase.io/ipfs/${IMG_CID}/${id}.png`;
 
+const SOFT = [
+  ["#ffd0e4", "#ffe6d2"], ["#d4e6ff", "#e6f6ff"], ["#e7d8ff", "#ffd9f2"],
+  ["#d2f6ea", "#e9fff6"], ["#fff0cf", "#ffe0e9"],
+];
+const DOTS = Array.from({ length: 14 }, (_, i) => {
+  const g = SOFT[i % SOFT.length];
+  return {
+    left: (i * 41) % 100,
+    top: (i * 67) % 100,
+    size: 90 + ((i * 57) % 150),
+    bg: `radial-gradient(circle at 35% 30%, ${g[0]}, ${g[1]})`,
+    dur: 14 + (i % 8),
+    delay: -(i % 9),
+    dx: ((i % 7) - 3) * 22,
+    dy: ((i % 5) - 2) * 26,
+  };
+});
+function DotField() {
+  return (
+    <div className="dotfield">
+      {DOTS.map((d, i) => (
+        <span key={i} className="dot" style={{
+          left: `${d.left}%`, top: `${d.top}%`, width: d.size, height: d.size, background: d.bg,
+          ["--dur" as any]: `${d.dur}s`, ["--delay" as any]: `${d.delay}s`,
+          ["--dx" as any]: `${d.dx}px`, ["--dy" as any]: `${d.dy}px`,
+        } as React.CSSProperties} />
+      ))}
+    </div>
+  );
+}
+
 function phaseOf(m: number) {
   if (m < 777) return "Phase 1 · $0.03";
   if (m < 3111) return "Phase 2 · $0.15";
@@ -123,6 +154,7 @@ export default function Mint() {
 
   return (
     <main className="app">
+      <DotField />
       <header className="topbar">
         <div className="brand">◐ <b>Mythos Dots</b></div>
         <ConnectButton showBalance={false} chainStatus="icon" />
@@ -153,7 +185,7 @@ export default function Mint() {
           <div className="card">
             <div className="row"><span>Revealed</span><b>{revealed}/{masked.length} letters</b></div>
             <div className="word">{masked.split("").join(" ")}</div>
-            <div className="note">A new letter appears every 2s. Guess sooner for a bigger quota (up to 10).</div>
+            <div className="note">A new letter appears every 3.5s. Guess sooner for a bigger quota (up to 10).</div>
             <form onSubmit={submitGuess} className="guess-form">
               <input className="input" value={guess} onChange={(e) => setGuess(e.target.value)} placeholder="your guess" autoFocus />
               <button className="btn" type="submit">Guess</button>

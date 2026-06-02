@@ -90,8 +90,9 @@ const shuffle = (n: number) => {
   return a;
 };
 
+const REVEAL_MS = 3500; // lật 1 chữ mỗi 3.5s
 function revealedCount(s: Session) {
-  return Math.min(s.word.length - 1, Math.floor((Date.now() - s.start) / 2000));
+  return Math.min(s.word.length - 1, Math.floor((Date.now() - s.start) / REVEAL_MS));
 }
 function masked(s: Session) {
   const show = new Set(s.order.slice(0, revealedCount(s)));
@@ -151,7 +152,7 @@ app.post("/api/session", (req, res) => {
     sessionId,
     length: word.length,
     masked: masked(s),
-    revealEverySec: 2,
+    revealEverySec: 3.5,
     ...(SHOW_DEFINITION === "true" ? { hint: "definition-on" } : {}),
   });
 });
