@@ -5,7 +5,7 @@ import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount, useReadContract } from "wagmi";
 import { readContract, writeContract, waitForTransactionReceipt } from "@wagmi/core";
 import { formatEther } from "viem";
-import { config } from "@/lib/wagmi";
+import { config, TARGET_CHAIN } from "@/lib/wagmi";
 import { ABI, CONTRACT_ADDRESS, AGENT_URL } from "@/lib/contract";
 
 type Pass = { quota: number; nonce: string; deadline: number; signature: `0x${string}` };
@@ -66,8 +66,8 @@ export default function Mint() {
   const [note, setNote] = useState("");
   const poll = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { data: total } = useReadContract({ address: CONTRACT_ADDRESS, abi: ABI, functionName: "maxSupply" });
-  const { data: minted } = useReadContract({ address: CONTRACT_ADDRESS, abi: ABI, functionName: "totalSupply" });
+  const { data: total } = useReadContract({ address: CONTRACT_ADDRESS, abi: ABI, functionName: "maxSupply", chainId: TARGET_CHAIN.id });
+  const { data: minted } = useReadContract({ address: CONTRACT_ADDRESS, abi: ABI, functionName: "totalSupply", chainId: TARGET_CHAIN.id });
 
   useEffect(() => { fetch(`${AGENT_URL}/api/state`).catch(() => {}); }, []);
   const stopPoll = () => { if (poll.current) { clearInterval(poll.current); poll.current = null; } };
@@ -78,7 +78,7 @@ export default function Mint() {
     (async () => {
       try {
         const c = (await readContract(config, {
-          address: CONTRACT_ADDRESS, abi: ABI, functionName: "costForEth",
+          address: CONTRACT_ADDRESS, abi: ABI, functionName: "costForEth", chainId: TARGET_CHAIN.id,
           args: [BigInt(Number(minted ?? 0n)), BigInt(pass.quota)],
         })) as bigint;
         setCostEst(c);
@@ -129,12 +129,12 @@ export default function Mint() {
     try {
       setPhase("minting"); setNote("Confirm in your wallet…");
       const base = (await readContract(config, {
-        address: CONTRACT_ADDRESS, abi: ABI, functionName: "costForEth",
+        address: CONTRACT_ADDRESS, abi: ABI, functionName: "costForEth", chainId: TARGET_CHAIN.id,
         args: [BigInt(Number(minted ?? 0n)), BigInt(pass.quota)],
       })) as bigint;
       const value = base + base / 20n;
       const h = await writeContract(config, {
-        address: CONTRACT_ADDRESS, abi: ABI, functionName: "mintWithPass",
+        address: CONTRACT_ADDRESS, abi: ABI, functionName: "mintWithPass", chainId: TARGET_CHAIN.id,
         args: [BigInt(pass.quota), BigInt(pass.nonce), BigInt(pass.deadline), pass.signature],
         value,
       });
