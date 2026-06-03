@@ -7,26 +7,17 @@
 ## 0) Mua domain (~$1-2)
 Porkbun / Namecheap → mua `mythosdots.xyz` (hoặc tên bạn thích). Để đó, bước 6 trỏ DNS.
 
-## 1) Tạo ví DEPLOY mới (terminal của bạn)
-> Agent key TÁI DÙNG ví cũ `0xe61Aa0dD87807ffaD1439d086345ddd0b5d571F4` (bạn chọn vậy, rotate sau bằng setAgentSigner nếu cần). CHỈ tạo ví deploy mới — vì ví này giữ quyền rút tiền.
-```bash
-export PATH="$HOME/.foundry/bin:$PATH"
-cast wallet new        # DEPLOY/owner → lưu ADDRESS + PRIVATE KEY riêng (KHÔNG paste vào chat)
-```
-- Nạp **~0.08 ETH thật** vào ví deploy.
-- Ví nhận royalty: dùng 1 ví **an toàn/cold** (khác ví deploy hot).
+## 1) Ví (theo lựa chọn của bạn)
+- **DEPLOY**: tái dùng ví testnet `0x603015635b22E97E873f6ebE7706bb43b5Fe1DA3` → **nạp ~0.08 ETH thật** vào ví này. (Chỉ tốn gas; sẽ bị tước quyền ở bước 4.)
+- **AGENT signer**: tái dùng `0xe61Aa0dD87807ffaD1439d086345ddd0b5d571F4` (rotate sau bằng setAgentSigner nếu cần).
+- **OWNER + ROYALTY**: ví an toàn `0x9cfb22ca51327FD9fAffcF4851B81F127eb71369` (MetaMask, key chưa lộ).
 
-## 2) Cấu hình deploy (sửa `contract/.env`)
+## 2) Cấu hình deploy — `contract/.env` đã pre-fill sẵn, chỉ cần điền 2 dòng:
 ```
-PRIVATE_KEY=<PRIVATE KEY ví B>
 MAINNET_RPC_URL=https://eth-mainnet.g.alchemy.com/v2/<KEY>
 ETHERSCAN_API_KEY=<key>
-MAX_SUPPLY=7777
-PRICE_FEED=0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419   # Chainlink ETH/USD mainnet
-AGENT_SIGNER=0xe61Aa0dD87807ffaD1439d086345ddd0b5d571F4   # ví agent cũ (tái dùng)
-BASE_URI=ipfs://bafybeicdxyjzpiuiyd4snbqp3v2defc7dep2w2ajjtqkycwl3h6reejb5a/
-ROYALTY_RECEIVER=<ví an toàn>
 ```
+(PRIVATE_KEY=ví testnet 0x6030, PRICE_FEED mainnet, AGENT_SIGNER, ROYALTY_RECEIVER=0x9cfb… đã set sẵn.)
 
 ## 3) Deploy + verify
 ```bash
@@ -37,12 +28,13 @@ forge script script/Deploy.s.sol:Deploy --rpc-url mainnet --broadcast --verify -
 ```
 → Ghi lại **CONTRACT_ADDRESS** (dòng `MythosDots:`).
 
-## 4) Bảo vệ quyền sở hữu (khuyên làm)
-Owner = ví B (hot) có quyền `withdraw` toàn bộ doanh thu mint. Chuyển owner sang ví cold/multisig:
+## 4) ⚠️ BẮT BUỘC NGAY SAU DEPLOY — chuyển owner về ví an toàn
+Ví deploy testnet đã lộ trong chat; phải tước quyền nó ngay:
 ```bash
-cast send <CONTRACT> "transferOwnership(address)" <VÍ_COLD> --rpc-url mainnet --private-key $PRIVATE_KEY
+cast send <CONTRACT> "transferOwnership(address)" 0x9cfb22ca51327FD9fAffcF4851B81F127eb71369 \
+  --rpc-url mainnet --private-key $PRIVATE_KEY
 ```
-(Sau đó setSaleActive/withdraw ký bằng ví cold.)
+Sau lệnh này, ví testnet **không còn quyền gì**. Mọi thao tác owner (setSaleActive, withdraw) từ giờ ký bằng ví `0x9cfb…` — dễ nhất là dùng **Etherscan → Contract → Write** kết nối MetaMask (không cần paste private key).
 
 ## 5) Agent lên mainnet (Render)
 - Render → service **mythos-agent** → **Settings → Instance Type → Starter ($7)** (always-on).
@@ -64,11 +56,10 @@ cast send <CONTRACT> "transferOwnership(address)" <VÍ_COLD> --rpc-url mainnet -
   - apex `@` → ALIAS/ANAME (hoặc A record) theo giá trị Render hiển thị.
   - HTTPS Render tự cấp (~vài phút).
 
-## 7) Mở bán
-```bash
-cast send <CONTRACT> "setSaleActive(bool)" true --rpc-url mainnet --private-key <owner key>
-```
-Test mint thật bằng 1 ví khác → kiểm tra trên Etherscan + OpenSea (opensea.io, contract sẽ tự index).
+## 7) Mở bán (ký bằng owner 0x9cfb… qua Etherscan, KHÔNG paste key)
+Etherscan → contract `0x…` → **Contract → Write** → **Connect to Web3** (MetaMask ví 0x9cfb…) → `setSaleActive` = `true` → Write.
+Test mint thật bằng 1 ví khác → kiểm tra Etherscan + OpenSea (opensea.io tự index).
+Rút doanh thu: cũng ở Write → `withdraw(to)`.
 
 ---
 
