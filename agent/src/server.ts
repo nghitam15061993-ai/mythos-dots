@@ -204,7 +204,7 @@ app.post("/api/guess", async (req, res) => {
 
   s.solved = true;
   if (quota <= 0) {
-    const reason = avail <= 0 ? "pool đã khóa hết — trượt" : "ví đã đạt trần 10";
+    const reason = avail <= 0 ? "Sold out — pool is full" : "Max minted (10/wallet)";
     return res.json({ correct: true, quota: 0, reason });
   }
 
