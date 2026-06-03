@@ -157,9 +157,14 @@ app.get("/api/state", async (_req, res) => {
   } catch (e: any) { res.status(500).json({ error: String(e?.message ?? e) }); }
 });
 
-app.post("/api/session", (req, res) => {
+app.post("/api/session", async (req, res) => {
   let wallet: string;
-  try { wallet = getAddress(req.body?.wallet); } catch { return res.status(400).json({ error: "wallet không hợp lệ" }); }
+  try { wallet = getAddress(req.body?.wallet); } catch { return res.status(400).json({ error: "Invalid wallet" }); }
+  // chặn sớm: ví đã đạt trần 10 thì khỏi cho chơi
+  try {
+    const m = Number(await client.readContract({ address: contract, abi: ABI, functionName: "mintedOf", args: [wallet as Address] }));
+    if (m >= MAX_PER_WALLET) return res.status(403).json({ error: "This wallet already minted the max (10 NFTs)." });
+  } catch {}
   const word = WORDS[Math.floor(Math.random() * WORDS.length)];
   const sessionId = randomBytes(16).toString("hex");
   const s: Session = { wallet, word, start: Date.now(), order: shuffle(word.length), solved: false };
@@ -204,7 +209,7 @@ app.post("/api/guess", async (req, res) => {
 
   s.solved = true;
   if (quota <= 0) {
-    const reason = avail <= 0 ? "Sold out — pool is full" : "Max minted (10/wallet)";
+    const reason = avail <= 0 ? "Sold out — pool is full" : "This wallet already minted the max (10 NFTs).";
     return res.json({ correct: true, quota: 0, reason });
   }
 
