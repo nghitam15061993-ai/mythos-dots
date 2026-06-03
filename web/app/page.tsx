@@ -177,7 +177,7 @@ export default function Mint() {
             <button className="play" onClick={start} disabled={!isConnected || starting}>
               {starting ? "Waking…" : isConnected ? "Tap to Play" : "Connect wallet"}
             </button>
-            <div className="note">{note || (isConnected ? "Guess the hidden word to lock a mint allocation." : "Connect your wallet (Sepolia) to begin.")}</div>
+            <div className="note">{note || (isConnected ? "Guess the hidden word to lock a mint allocation." : "")}</div>
           </>
         )}
 
