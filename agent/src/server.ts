@@ -112,9 +112,24 @@ function reservedPending(): number {
   }
   return sum;
 }
+// cache totalSupply + price để không gọi RPC mỗi request (chống rate-limit khi đông)
+let _mintedCache = 0n, _mintedAt = 0;
+async function getTotalMinted(): Promise<number> {
+  if (Date.now() - _mintedAt > 4000) {
+    try { _mintedCache = (await client.readContract({ address: contract, abi: ABI, functionName: "totalSupply" })) as bigint; _mintedAt = Date.now(); } catch {}
+  }
+  return Number(_mintedCache);
+}
+let _priceCache = 0n, _priceAt = 0;
+async function getPriceWei(): Promise<bigint> {
+  if (Date.now() - _priceAt > 10000) {
+    try { _priceCache = (await client.readContract({ address: contract, abi: ABI, functionName: "currentPriceEth" })) as bigint; _priceAt = Date.now(); } catch {}
+  }
+  return _priceCache;
+}
+
 async function available(): Promise<number> {
-  const minted = (await client.readContract({ address: contract, abi: ABI, functionName: "totalSupply" })) as bigint;
-  return Number(maxSupply) - Number(minted) - reservedPending();
+  return Number(maxSupply) - (await getTotalMinted()) - reservedPending();
 }
 function rateOk(wallet: string) {
   const t = Date.now();
@@ -131,12 +146,13 @@ app.use(express.json());
 
 app.get("/api/state", async (_req, res) => {
   try {
-    const minted = (await client.readContract({ address: contract, abi: ABI, functionName: "totalSupply" })) as bigint;
+    const minted = await getTotalMinted();
+    const price = await getPriceWei();
     res.json({
       maxSupply: Number(maxSupply),
-      totalMinted: Number(minted),
-      available: Number(maxSupply) - Number(minted) - reservedPending(),
-      currentPriceEthWei: priceWei.toString(),
+      totalMinted: minted,
+      available: Number(maxSupply) - minted - reservedPending(),
+      currentPriceEthWei: price.toString(),
     });
   } catch (e: any) { res.status(500).json({ error: String(e?.message ?? e) }); }
 });
